@@ -19,7 +19,7 @@ We can split  JS into two pieces:
 Primitive vs Reference Values 
 -- 
 **Primitive Values**
- 
+ aaa
 Strings, number, booleans , null etc.
 
 They are stored in memory (normally on stack), variable store value.
