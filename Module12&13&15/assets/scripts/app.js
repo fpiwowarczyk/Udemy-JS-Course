@@ -106,6 +106,7 @@ class ProjectItem {
     }
 
     connectDrag() {
+        const item = document.getElementById(this.id);
         document.getElementById(this.id).addEventListener('dragstart', e => {
             e.dataTransfer.setData('text/plain', this.id);
             e.dataTransfer.effectAllowed = 'move';
