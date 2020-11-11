@@ -19,6 +19,10 @@ body {
   background: #ff0062;
 }
 
+.droppable {
+  background: #ffe0ec;
+}
+
 #main-header h1 {
   color: white;
   margin: 0;

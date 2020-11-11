@@ -9,12 +9,12 @@ class DOMHelper {
         const element = document.getElementById(elementId);
         const destinationElement = document.querySelector(newDestinationSelector);
         destinationElement.append(element);
+        element.scrollIntoView({behavior: 'smooth'});
     }
 }
 
 class Component {
 
-    element;
     constructor(hostElementId, insertBefore = false) {
         if (hostElementId) {
             this.hostElement = document.getElementById(hostElementId);
@@ -23,6 +23,7 @@ class Component {
         }
         this.insertBefore = insertBefore;
     }
+
     detach() {
         if (this.element) {
             this.element.remove();
@@ -40,9 +41,10 @@ class Component {
 
 class Tooltip extends Component {
 
-    constructor(closeNotifierFunction) {
-        super();
+    constructor(closeNotifierFunction, text, hostElement) {
+        super(hostElement);
         this.closeNotifier = closeNotifierFunction;
+        this.text = text;
         this.create();
     }
 
@@ -54,7 +56,23 @@ class Tooltip extends Component {
     create() {
         const tooltipElement = document.createElement('div');
         tooltipElement.className = 'card';
-        tooltipElement.textContent = "DUMMY";
+        const tooltipTemplate = document.getElementById('tooltip')
+        const tooltipBody = document.importNode(tooltipTemplate.content, true);
+        tooltipBody.querySelector('p').textContent = this.text;
+        tooltipElement.append(tooltipBody);
+        const hostElPosLeft = this.hostElement.offsetLeft;
+        const hostElPosTop = this.hostElement.offsetTop;
+        const hostElHeight = this.hostElement.clientHeight;
+        const parentElementScrolling = this.hostElement.parentElement.scrollTop;
+
+        const x = hostElPosLeft;
+        const y = hostElPosTop + hostElHeight - parentElementScrolling - 10;
+
+        tooltipElement.style.position = 'absolute';
+        tooltipElement.style.left = x + ' px'; // 500 px;
+        tooltipElement.style.top = y + 'px';
+
+
         tooltipElement.addEventListener('click', this.closeToolTip);
         this.element = tooltipElement;
     }
@@ -70,23 +88,35 @@ class ProjectItem {
         this.updateProjectListsHandler = updateProjectListsFunction;
         this.connectMoreInfoButton();
         this.connectSwitchButton(type);
+        this.connectDrag();
     }
 
     showMoreInfoHandler() {
         if (this.hasActiveTooltip) {
             return;
         }
+        const projectElement = document.getElementById(this.id);
+        const tooltipText = projectElement.dataset.extraInfo;
         const tooltip = new Tooltip(() => {
-            this.hasActiveTooltip = false;
-        });
+                this.hasActiveTooltip = false;
+            }, tooltipText, this.id
+        );
         tooltip.attach();
         this.hasActiveTooltip = true;
+    }
+
+    connectDrag() {
+        document.getElementById(this.id).addEventListener('dragstart', e => {
+            e.dataTransfer.setData('text/plain', this.id);
+            e.dataTransfer.effectAllowed = 'move';
+        });
     }
 
     connectMoreInfoButton() {
         const projectItemElement = document.getElementById(this.id);
         const moreInfoBtn = projectItemElement.querySelector('button:first-of-type');
-        moreInfoBtn.addEventListener('click', this.showMoreInfoHandler);
+        moreInfoBtn.addEventListener('click', this.showMoreInfoHandler.bind(this));
+
     }
 
     connectSwitchButton(type) {
@@ -118,6 +148,45 @@ class ProjectList {
             );
         }
         console.log(this.projects);
+        this.connectDroppable();
+    }
+
+    connectDroppable() {
+        const list = document.querySelector(`#${this.type}-projects ul`);
+
+        list.addEventListener('dragenter', e => {
+            if (e.dataTransfer.types[0] === 'text/plain') {
+                e.preventDefault();
+                list.parentElement.classList.add('droppable');
+            }
+
+        });
+
+        list.addEventListener('dragover', e => {
+            if (e.dataTransfer.types[0] === 'text/plain') {
+                e.preventDefault();
+            }
+        });
+
+        list.addEventListener('dragleave', e => {
+            if (e.relatedTarget.closest(`#${this.type}-projects ul`) !== list) {
+                list.parentElement.classList.remove('droppable');
+            }
+        });
+
+        list.addEventListener('drop', e => {
+            const prjId = e.dataTransfer.getData('text/plain');
+            if (this.projects.find(p => p.id === prjId)) {
+                return;
+            }
+            document
+                .getElementById(prjId)
+                .querySelector('button:last-of-type')
+                .click();
+            list.parentElement.classList.remove('droppable');
+            e.preventDefault();
+
+        });
     }
 
     setSwitchHandlerFunction(switchHandlerFunction) {
@@ -146,6 +215,14 @@ class App {
         finishedProjectsList.setSwitchHandlerFunction(
             activeProjectsList.addProject.bind(activeProjectsList)
         );
+        //document.getElementById('start-analytics-btn').addEventListener('click',this.startAnalytics);
+    }
+
+    static startAnalytics() {
+        const analyticsScript = document.createElement('script');
+        analyticsScript.src = 'assets/scripts/analytics.js';
+        analyticsScript.defer = true;
+        document.head.append(analyticsScript);
     }
 }
 
